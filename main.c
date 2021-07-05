@@ -35,51 +35,62 @@ int main() {
     struct timespec interval = { .tv_sec = 0, .tv_nsec = 25000000 };
     size_t size = 200;
 
+    // Experiment with these :).
+    float speed = 0.025; // max speed of firework
+    float vary = 0.8; //variability factor between 0 and 1 (1 is max)
+    size_t nfire=20; // number of fireworks
+    
     ncurses_init();
     srand((unsigned) time(NULL));
 
-    // reserve memory for particle array
-    particle *p = (particle *) calloc(sizeof(particle), size);
-    particle *q = (particle *) calloc(sizeof(particle), size);
-    particle *r = (particle *) calloc(sizeof(particle), size);
-    particle *s = (particle *) calloc(sizeof(particle), size);
-
-    // initialize particle array
-    particle_init(p, size);
-    particle_init(q, size);
-    particle_init(r, size);
-    particle_init(s, size);
+    particle* array[nfire];
+    for(size_t i=0; i<nfire; ++i)
+    {
+        // reserve memory for particle array
+        array[i] = (particle *) calloc(sizeof(particle), size);
+        // initialize particle array
+        particle_init(array[i], size);
+    }
 
     // check for user input to quit program
     while (getch() != 'q') {
-        if (p[0].life < 1.21 && p[0].life > 1.19) {
-            // reinitialize second array at 3/4 life of first
-            particle_init(q, size);
-        } else if (p[0].life < 0.81 && p[0].life > 0.79) {
-            // reinitialize third array at 1/2 life of first
-            particle_init(r, size);
-        } else if (p[0].life < 0.41 && p[0].life > 0.39) {
-            // reinitialize fourth array at 1/4 life of first
-            particle_init(s, size);
-        } else if (p[0].life < 0.01) {
-            // check for end of life and reinitialize array if dead
-            particle_init(p, size);
+    
+        for(size_t i=0; i<nfire; ++i)
+        {
+            particle* p = array[i];
+            for(size_t j=i+1; j<nfire-3; ++j)
+            {
+                if (array[i][0].life < 1.21 && array[i][0].life > 1.19) {
+                    // reinitialize second array at 3/4 life of first
+                   if( array[j+1][0].life < 0.01 ) particle_init(array[j+1], size);
+                } else if (array[i+1][0].life < 0.81 && array[i+1][0].life > 0.79) {
+                    // reinitialize third array at 1/2 life of first
+                    if( array[j+2][0].life < 0.01 ) particle_init(array[j+2], size);
+                } else if (array[i+2][0].life < 0.41 && array[i+2][0].life > 0.39) {
+                    // reinitialize fourth array at 1/4 life of first
+                    if( array[j+3][0].life < 0.01 ) particle_init(array[j+3], size);
+                }
+            }
+            if (array[i][0].life < 0.01) {
+                // check for end of life and reinitialize array if dead
+                particle_init(p, size);
+            }
         }
-
         // erase screen
         erase();
 
         // update all particles
-        particle_update(p, 0.01, size);
-        particle_update(q, 0.01, size);
-        particle_update(r, 0.01, size);
-        particle_update(s, 0.01, size);
+        for(size_t i=0; i<nfire; ++i)
+        {
+            float x = (float)rand() / (float)RAND_MAX;
+            particle_update(array[i], speed*(vary*x+1.0-vary), size);
+        }
 
         // draw all particles to screen
-        particle_draw(p, size);
-        particle_draw(q, size);
-        particle_draw(r, size);
-        particle_draw(s, size);
+        for(size_t i=0; i<nfire; ++i)
+        {
+            particle_draw(array[i], size);
+        }
 
         // draw particles to screen
         refresh();
@@ -88,14 +99,11 @@ int main() {
         nanosleep(&interval, NULL);
     }
 
-    free(p);
-    p = NULL;
-    free(q);
-    q = NULL;
-    free(r);
-    r = NULL;
-    free(s);
-    s = NULL;
+    for(size_t i=0; i<nfire; ++i)
+    {
+        free(array[i]);
+        array[i]=NULL;
+    }
 
     endwin();
 
